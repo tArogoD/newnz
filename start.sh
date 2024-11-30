@@ -1,5 +1,5 @@
 #!/bin/bash
-AGO_AUTH=${AGO_AUTH:-'eyJhIjoiZjAzMGY1ZDg4OGEyYmRlN2NiMDg3NTU5MzM4ZjE0OTciLCJ0IjoiZjIzMDA3MWUtYjBhMy00ZGM0LTg2MjYtMDVjYjQzNmM3Y2YxIiwicyI6Ik0yTTRPVEl6TWpjdE1tWXdPQzAwTWpkaUxUazJNamN0Tkdaak9EaGlNakE0T1dKayJ9'}
+ARGO_AUTH=${ARGO_AUTH:-'eyJhIjoiZjAzMGY1ZDg4OGEyYmRlN2NiMDg3NTU5MzM4ZjE0OTciLCJ0IjoiZjIzMDA3MWUtYjBhMy00ZGM0LTg2MjYtMDVjYjQzNmM3Y2YxIiwicyI6Ik0yTTRPVEl6TWpjdE1tWXdPQzAwTWpkaUxUazJNamN0Tkdaak9EaGlNakE0T1dKayJ9'}
 
 # 下载并解压 Dashboard
 if [ ! -f "dashboard-linux-amd64.zip" ]; then
@@ -30,7 +30,7 @@ if ! kill -0 $DASHBOARD_PID 2>/dev/null; then
 fi
 
 # 启动 Cloudflare Tunnel
-nohup ./cloudflared-linux-amd64 tunnel --edge-ip-version auto --protocol http2 --no-autoupdate run --token "$AGO_AUTH" &
+nohup ./cloudflared-linux-amd64 tunnel --edge-ip-version auto --protocol http2 --no-autoupdate run --token "$ARGO_AUTH" &
 
 # 启动 Nginx 并保持前台运行
 nginx -g "daemon off;"
