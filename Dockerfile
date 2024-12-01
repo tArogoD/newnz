@@ -1,5 +1,4 @@
-# Dockerfile
-FROM nginx:stable-alpine
+FROM nginx:alpine
 
 RUN apk add --no-cache wget unzip bash curl
 
