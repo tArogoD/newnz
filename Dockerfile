@@ -12,5 +12,3 @@ EXPOSE 80
 WORKDIR /app
 
 ENTRYPOINT ["/start.sh"]
-
-USER 10001
