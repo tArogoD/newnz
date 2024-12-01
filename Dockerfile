@@ -10,7 +10,8 @@ RUN chmod +x /start.sh
 EXPOSE 80
 
 WORKDIR /app
-RUN addgroup -g 999 nginx && adduser -u 999 -G nginx -D nginx
-USER nginx
+
+RUN groupadd -g 999 appgroup
+RUN useradd -u 999 -g appgroup appuser
 
 ENTRYPOINT ["/start.sh"]
