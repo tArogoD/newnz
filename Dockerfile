@@ -13,4 +13,4 @@ WORKDIR /app
 
 ENTRYPOINT ["/start.sh"]
 
-USER 1000
+USER 10001
