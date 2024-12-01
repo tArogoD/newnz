@@ -1,4 +1,4 @@
-FROM nginx:alpine
+FROM nginx:stable-alpine
 
 RUN apk add --no-cache wget unzip bash curl
 
