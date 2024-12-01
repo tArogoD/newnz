@@ -1,7 +1,5 @@
 #!/bin/bash
 
-ARGO_AUTH=${ARGO_AUTH:-'eyJhIjoiZjAzMGY1ZDg4OGEyYmRlN2NiMDg3NTU5MzM4ZjE0OTciLCJ0IjoiZjIzMDA3MWUtYjBhMy00ZGM0LTg2MjYtMDVjYjQzNmM3Y2YxIiwicyI6Ik0yTTRPVEl6TWpjdE1tWXdPQzAwTWpkaUxUazJNamN0Tkdaak9EaGlNakE0T1dKayJ9'}
-
 # 下载并解压 Dashboard
 if [ ! -f "dashboard-linux-amd64.zip" ]; then
   wget -q https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip
