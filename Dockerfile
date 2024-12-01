@@ -11,6 +11,6 @@ EXPOSE 80
 
 WORKDIR /app
 
-RUN echo "0 65535" > /proc/sys/net/ipv4/ping_group_range
-
 ENTRYPOINT ["/start.sh"]
+
+USER 1000
