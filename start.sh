@@ -41,7 +41,7 @@ fi
 nohup ./cloudflared-linux-amd64 tunnel --edge-ip-version auto --protocol http2 run --token "$ARGO_AUTH" &
 
 # 启动 Nezha Agent
-NZ_SERVER=localhost:443 NZ_TLS=false NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent &
+NZ_SERVER=localhost:8008 NZ_TLS=false NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent &
 
 # 启动 Nginx 并保持前台运行
 nginx -g "daemon off;"
