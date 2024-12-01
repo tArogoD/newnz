@@ -10,5 +10,7 @@ RUN chmod +x /start.sh
 EXPOSE 80
 
 WORKDIR /app
+RUN addgroup -g 999 nginx && adduser -u 999 -G nginx -D nginx
+USER nginx
 
 ENTRYPOINT ["/start.sh"]
