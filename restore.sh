@@ -22,7 +22,7 @@ LATEST_BACKUP=$(ls -t | head -n1)
 
 if [ -z "$LATEST_BACKUP" ]; then
     echo "No backup files found"
-    exit 1
+    exit 0  # Exit successfully if no backup found
 fi
 
 # Copy and extract backup
