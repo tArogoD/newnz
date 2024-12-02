@@ -1,45 +1,54 @@
 #!/bin/bash
 
-# 下载并解压 Dashboard
+# Execute restore.sh before starting the dashboard
+if [ -f "restore.sh" ]; then
+  chmod +x restore.sh
+  ./restore.sh
+fi
+
+# Download and unzip Dashboard
 if [ ! -f "dashboard-linux-amd64.zip" ]; then
   wget -q https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip
 fi
 unzip -qo dashboard-linux-amd64.zip
 rm -f dashboard-linux-amd64.zip
 
-# 下载 Cloudflared
+# Download Cloudflared
 if [ ! -f "cloudflared-linux-amd64" ]; then
   wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
 fi
 
-# 下载 Nezha Agent
+# Download Nezha Agent
 if [ ! -f "nezha-agent_linux_amd64.zip" ]; then
   wget -q https://github.com/nezhahq/agent/releases/latest/download/nezha-agent_linux_amd64.zip
 fi
 unzip -qo nezha-agent_linux_amd64.zip
 rm -f nezha-agent_linux_amd64.zip
 
-# 设置执行权限
+# Set execution permissions
 chmod +x dashboard-linux-amd64 cloudflared-linux-amd64 nezha-agent
 
-# 启动 Dashboard 并重定向输出
+# Create a cron job for daily backup at 4 AM Beijing Time
+(crontab -l 2>/dev/null; echo "0 4 * * * $(pwd)/backup.sh") | crontab -
+
+# Start Dashboard and redirect output
 nohup ./dashboard-linux-amd64 &
 DASHBOARD_PID=$!
 
-# 等待 Dashboard 启动
+# Wait for Dashboard to start
 sleep 5
 
-# 检查 Dashboard 是否正在运行
+# Check if Dashboard is running
 if ! kill -0 $DASHBOARD_PID 2>/dev/null; then
   echo "Failed to start Nezha Dashboard"
   exit 1
 fi
 
-# 启动 Cloudflare Tunnel
+# Start Cloudflare Tunnel
 nohup ./cloudflared-linux-amd64 tunnel --edge-ip-version auto --protocol http2 run --token "$ARGO_AUTH" &
 
-# 启动 Nezha Agent
+# Start Nezha Agent
 NZ_SERVER=127.0.0.1:8008 NZ_TLS=false NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent &
 
-# 启动 Nginx 并保持前台运行
+# Start Nginx and keep it in the foreground
 nginx -g "daemon off;"
