@@ -1,6 +1,6 @@
 FROM nginx:stable-alpine
 
-RUN apk add --no-cache wget unzip bash curl
+RUN apk add --no-cache wget unzip bash curl git tar
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
