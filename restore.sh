@@ -20,23 +20,20 @@ cd temp_repo/backups
 # Get the most recent backup file
 LATEST_BACKUP=$(ls -t | head -n1)
 
-if [ -z "$LATEST_BACKUP" ]; then
-    echo "No backup files found"
-    exit 0  # Exit successfully if no backup found
+if [ -n "$LATEST_BACKUP" ]; then
+    # Copy and extract backup
+    cp "$LATEST_BACKUP" ../../
+    cd ../..
+
+    # Remove existing data directory
+    rm -rf data
+
+    # Extract new backup
+    tar -xzvf "$LATEST_BACKUP"
+
+    # Clean up
+    rm "$LATEST_BACKUP"
+    rm -rf temp_repo
+
+    echo "Restore completed successfully"
 fi
-
-# Copy and extract backup
-cp "$LATEST_BACKUP" ../../
-cd ../..
-
-# Remove existing data directory
-rm -rf data
-
-# Extract new backup
-tar -xzvf "$LATEST_BACKUP"
-
-# Clean up
-rm "$LATEST_BACKUP"
-rm -rf temp_repo
-
-echo "Restore completed successfully"
