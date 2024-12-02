@@ -4,8 +4,9 @@ RUN apk add --no-cache wget unzip bash curl git tar
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+COPY start.sh backup.sh restore.sh /
+
+RUN chmod +x /start.sh /backup.sh /restore.sh
 
 EXPOSE 80
 
