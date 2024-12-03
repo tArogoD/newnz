@@ -47,8 +47,8 @@ fi
 # Start Cloudflare Tunnel
 nohup ./cloudflared-linux-amd64 tunnel --edge-ip-version auto --protocol http2 run --token "$ARGO_AUTH" &
 
-# Start Nezha Agent
-NZ_SERVER=$NZ_DOMAIN:443 NZ_TLS=true NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent &
-
 # Start Nginx and keep it in the foreground
 nginx -g "daemon off;"
+
+# Start Nezha Agent
+NZ_SERVER=$NZ_DOMAIN:443 NZ_TLS=true NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent &
