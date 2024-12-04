@@ -52,7 +52,7 @@ if ! kill -0 $DASHBOARD_PID 2>/dev/null; then
 fi
 
 # Start Cloudflare Tunnel
-nohup ./cloudflared-linux-amd64 tunnel --edge-ip-version auto --protocol http2 run --token "$ARGO_AUTH" &
+nohup ./cloudflared-linux-amd64 tunnel run --protocol http2 run --token "$ARGO_AUTH" &
 
 # Start Nginx in the background
 nginx &
