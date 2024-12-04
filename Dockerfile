@@ -2,8 +2,6 @@ FROM nginx:stable-alpine
 
 RUN apk add --no-cache wget unzip bash curl git tar openssl
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
 COPY start.sh backup.sh restore.sh /app/
 
 WORKDIR /app
