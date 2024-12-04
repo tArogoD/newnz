@@ -10,8 +10,8 @@ fi
 TIMESTAMP=$(TZ='Asia/Shanghai' date +"%Y-%m-%d-%H-%M-%S")
 BACKUP_FILE="data-${TIMESTAMP}.tar.gz"
 
-# Compress data directory
-tar -czvf "$BACKUP_FILE" data
+# Compress data directory and config.yml
+tar -czvf "$BACKUP_FILE" data config.yml
 
 # GitHub repository details
 GITHUB_REPO="https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/${REPO_NAME}.git"
