@@ -6,6 +6,10 @@ on:
 jobs:
   Building:
       runs-on: ubuntu-latest
+      permissions:
+        contents: write
+        actions: write
+
       name: "Build image"
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -17,7 +21,15 @@ jobs:
         uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
-
+          
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 2
+        
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3.0.0
 
