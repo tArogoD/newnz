@@ -2,13 +2,6 @@ FROM nginx:stable
 RUN apt-get update && apt-get install -y \
     wget \
     unzip \
-    bash \
-    curl \
-    git \
-    tar \
-    openssl \
-    python3 \
-    python3-pip \
     certbot \
     python3-certbot-nginx \
     && rm -rf /var/lib/apt/lists/*
