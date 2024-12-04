@@ -7,11 +7,11 @@ if [ -z "$GITHUB_USERNAME" ] || [ -z "$REPO_NAME" ] || [ -z "$GITHUB_TOKEN" ]; t
 fi
 
 # Create timestamp for backup (Shanghai time)
-TIMESTAMP=$(TZ='Asia/Shanghai' date +"%Y-%m-%d-%H:%M:%S")
+TIMESTAMP=$(TZ='Asia/Shanghai' date +"%Y-%m-%d-%H-%M-%S")
 BACKUP_FILE="data-${TIMESTAMP}.tar.gz"
 
 # Compress data directory
-tar -czvf "$BACKUP_FILE" data/
+tar -czvf "$BACKUP_FILE" data
 
 # GitHub repository details
 GITHUB_REPO="https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/${REPO_NAME}.git"
