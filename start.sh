@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# Extract domain from ARGO_AUTH token
-if [ -n "$ARGO_AUTH" ]; then
-  # Use sed to extract the domain from the Argo token
-  # Assumes the token contains a full URL or domain
-  DOMAIN=$(echo "$ARGO_AUTH" | sed -E 's/.*@([^:]+).*/\1/')
-fi
-
-# Execute restore.sh before starting the dashboard
 if [ -f "restore.sh" ]; then
   chmod +x restore.sh
   ./restore.sh
