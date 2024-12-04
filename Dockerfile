@@ -1,5 +1,5 @@
-FROM nginx:stable-alpine
-RUN apk add --no-cache \
+FROM nginx:stable-debian
+RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     bash \
@@ -8,13 +8,10 @@ RUN apk add --no-cache \
     tar \
     openssl \
     python3 \
-    py3-pip \
-    py3-setuptools
-
-# 使用 pip 安装 certbot，并捕获可能的错误
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir certbot certbot-nginx || \
-    (echo "Certbot installation failed" && exit 1)
+    python3-pip \
+    certbot \
+    python3-certbot-nginx \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY start.sh backup.sh restore.sh /app/
 WORKDIR /app
