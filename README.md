@@ -22,3 +22,10 @@ starts_with(http.request.uri.path, "/proto.NezhaService/") and starts_with(http.
 要跳过的 WAF 组件：全选
    
 部署即可。
+
+
+探针IP加到CF拦截白名单  
+由于探针上报日志频繁，且VPS的IP质量参差不齐，可能会被CF误拦截导致无法正常工作。可以添加白名单。
+操作路径：安全性-WAF-工具  
+或者参考文档
+	https://developers.cloudflare.com/waf/tools/ip-access-rules/
