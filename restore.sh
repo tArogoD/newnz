@@ -1,5 +1,4 @@
 #!/bin/bash
-# restore.sh
 
 # Check if required environment variables are set
 if [ -z "$GITHUB_USERNAME" ] || [ -z "$REPO_NAME" ] || [ -z "$GITHUB_TOKEN" ]; then
@@ -15,24 +14,23 @@ if [ ! -d "temp_repo" ]; then
     git clone "$GITHUB_REPO" temp_repo
 fi
 
-cd temp_repo/backups
+cd temp_repo
 
 # Get the most recent backup file
-LATEST_BACKUP=$(ls -t | head -n1)
+LATEST_BACKUP=$(ls data-*.tar.gz | sort -r | head -n1)
 
 if [ -n "$LATEST_BACKUP" ]; then
-    # Copy and extract backup
-    cp "$LATEST_BACKUP" ../../
-    cd ../..
+    # Copy backup to current directory
+    cp "$LATEST_BACKUP" ../
 
     # Remove existing data directory
-    rm -rf data
+    rm -rf ../data
 
     # Extract new backup
-    tar -xzvf "$LATEST_BACKUP"
+    tar -xzvf "../$LATEST_BACKUP" -C ..
 
     # Clean up
-    rm "$LATEST_BACKUP"
+    rm "../$LATEST_BACKUP"
     rm -rf temp_repo
 
     echo "Restore completed successfully"
