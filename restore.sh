@@ -23,8 +23,9 @@ if [ -n "$LATEST_BACKUP" ]; then
     # Copy backup to current directory
     cp "$LATEST_BACKUP" ../
 
-    # Remove existing data directory
+    # Remove existing data directory and config.yml
     rm -rf ../data
+    rm -f ../config.yml
 
     # Extract new backup
     tar -xzvf "../$LATEST_BACKUP" -C ..
