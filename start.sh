@@ -68,7 +68,7 @@ NGINX_PID=$!
 sleep 5
 
 # Use the extracted DOMAIN if available, otherwise fall back to original method
-NZ_SERVER=$NZ_DOMAIN:443 NZ_TLS=true NZ_CLIENT_SECRET=$NZ_agentsecretkey ./nezha-agent
+NZ_SERVER=localhost:8008 NZ_TLS=false NZ_CLIENT_SECRET=$NZ_agentsecretkey ./nezha-agent
 
 # Keep Nginx running in the foreground
 wait $NGINX_PID
