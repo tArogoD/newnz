@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Function to download latest or specific version
+download_release() {
+  local repo="$1"
+  local filename="$2"
+  local version="${3:-latest}"
+  
+  if [ "$version" = "latest" ]; then
+    wget -q "https://github.com/$repo/releases/latest/download/$filename"
+  else
+    wget -q "https://github.com/$repo/releases/download/$version/$filename"
+  fi
+}
+
+# Restore script
 if [ -f "restore.sh" ]; then
   chmod +x restore.sh
   ./restore.sh
@@ -7,7 +21,7 @@ fi
 
 # Download and unzip Dashboard
 if [ ! -f "dashboard-linux-amd64.zip" ]; then
-  wget -q https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip
+  download_release "nezhahq/nezha" "dashboard-linux-amd64.zip" "$DASHBOARD_VERSION"
 fi
 unzip -qo dashboard-linux-amd64.zip
 rm -f dashboard-linux-amd64.zip
@@ -19,7 +33,7 @@ fi
 
 # Download Nezha Agent
 if [ ! -f "nezha-agent_linux_amd64.zip" ]; then
-  wget -q https://github.com/nezhahq/agent/releases/latest/download/nezha-agent_linux_amd64.zip
+  download_release "nezhahq/agent" "nezha-agent_linux_amd64.zip" "$AGENT_VERSION"
 fi
 unzip -qo nezha-agent_linux_amd64.zip
 rm -f nezha-agent_linux_amd64.zip
@@ -28,7 +42,7 @@ rm -f nezha-agent_linux_amd64.zip
 chmod +x dashboard-linux-amd64 cloudflared-linux-amd64 nezha-agent
 
 # Create a cron job for daily backup at 4 AM Beijing Time
-(crontab -l 2>/dev/null; echo "0 4 *** $(pwd)/backup.sh") | crontab -
+(crontab -l 2>/dev/null; echo "0 4 * * * $(pwd)/backup.sh") | crontab -
 
 # Start Dashboard and redirect output
 nohup ./dashboard-linux-amd64 &
