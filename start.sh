@@ -202,9 +202,8 @@ while true; do
     done
 
     # 如果有组件更新，则重启服务
-    if [ $updated -eq 1 ]; then
-        stop_services
-        "$0" &  # 使用后台方式运行脚本
-        exit 0  # 退出当前进程"
-    fi
+   if [ $updated -eq 1 ]; then
+      stop_services
+      main
+   fi
 done
