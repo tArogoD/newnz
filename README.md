@@ -1,3 +1,5 @@
+V1版哪吒面板，自动备份数据，bin文件自动更新。
+
 Docker镜像地址
 ```
 tarogod/newnz
