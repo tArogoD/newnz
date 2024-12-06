@@ -4,12 +4,12 @@ tarogod/newnz
 ```
 必须设置的变量
 ```
-ARGO_AUTH
-NZ_agentsecretkey
-GITHUB_USERNAME
-REPO_NAME
-GITHUB_TOKEN
-NZ_DOMAIN
+ARGO_AUTH #cloudflared token
+NZ_agentsecretkey #nezha dashboard secret key
+GITHUB_USERNAME #github user name
+REPO_NAME #backup repo name
+GITHUB_TOKEN #github token
+NZ_DOMAIN #nezha domain
 ```
 
 跳过自动程序攻击模式  
