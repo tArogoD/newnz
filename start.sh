@@ -86,7 +86,7 @@ start_services() {
     
     # 启动仪表板
     nohup ./dashboard-linux-amd64 >/dev/null 2>&1 &
-    sleep 5
+    sleep 10
     
     # 启动 Nezha Agent
     NZ_SERVER=$NZ_DOMAIN:443 NZ_TLS=true NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent >/dev/null 2>&1 &
