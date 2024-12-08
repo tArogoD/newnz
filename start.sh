@@ -41,7 +41,7 @@ update_component() {
             return 1
         }
         return 0
-    fi
+    }
 
     # 获取当前版本
     if [ "$component" == "dashboard" ]; then
@@ -97,7 +97,7 @@ stop_services() {
     pkill -f "dashboard-linux-amd64|cloudflared-linux-amd64|nezha-agent|nginx"
 }
 
-main() {
+initialize() {
     # 检查必要的环境变量
     [ -z "$NZ_DOMAIN" ] && { echo "Error: NZ_DOMAIN not set"; exit 1; }
     [ -z "$ARGO_AUTH" ] && { echo "Error: ARGO_AUTH not set"; exit 1; }
@@ -112,7 +112,7 @@ main() {
     # 更新组件
     for repo_info in "${REPOS[@]}"; do
         IFS=: read -r repo filename component <<< "$repo_info"
-        update_component "$repo" "$filename" "$component" || true
+        download_component "$repo" "$filename" "$component" || true
     done
 
     # 下载 Cloudflared
@@ -185,25 +185,30 @@ EOF
 }
 
 # 主循环
-while true; do
-    # 执行主程序
-    main
+main() {
+    # 初始化首次运行
+    initialize
 
-    # 等待 30 分钟
-    sleep 1800
+    while true; do
+        # 检查更新
+        updated=0
+        for repo_info in "${REPOS[@]}"; do
+            IFS=: read -r repo filename component <<< "$repo_info"
+            if update_component "$repo" "$filename" "$component"; then
+                updated=1
+            fi
+        done
 
-    # 检查更新
-    updated=0
-    for repo_info in "${REPOS[@]}"; do
-        IFS=: read -r repo filename component <<< "$repo_info"
-        if update_component "$repo" "$filename" "$component"; then
-            updated=1
+        # 如果有组件更新，则重启服务
+        if [ $updated -eq 1 ]; then
+            stop_services
+            initialize
         fi
-    done
 
-    # 如果有组件更新，则重启服务
-   if [ $updated -eq 1 ]; then
-      stop_services
-      main
-   fi
-done
+        # 等待 30 分钟
+        sleep 1800
+    done
+}
+
+# 启动主程序
+main
