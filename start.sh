@@ -1,6 +1,7 @@
 #!/bin/bash
 
 WORK_DIR=/app
+RESTORE_INITIALIZED=0
 REPOS=(
     "nezhahq/nezha:dashboard-linux-amd64.zip:dashboard"
     "nezhahq/agent:nezha-agent_linux_amd64.zip:agent"
@@ -103,8 +104,16 @@ initialize() {
     [ -z "$ARGO_AUTH" ] && { echo "Error: ARGO_AUTH not set"; exit 1; }
     [ -z "$NZ_agentsecretkey" ] && { echo "Error: NZ_agentsecretkey not set"; exit 1; }
 
-    # 恢复
-    [ -f "restore.sh" ] && { chmod +x restore.sh; ./restore.sh; }
+    # 只在首次初始化或有组件更新时运行 restore.sh
+    if [ $RESTORE_INITIALIZED -eq 0 ] || [ "$1" = "1" ]; then
+        # 恢复
+        [ -f "restore.sh" ] && { chmod +x restore.sh; ./restore.sh; }
+        
+        # 首次初始化时设置标志
+        if [ $RESTORE_INITIALIZED -eq 0 ]; then
+            RESTORE_INITIALIZED=1
+        fi
+    fi
 
     # 设置 SSL
     setup_ssl
@@ -187,7 +196,7 @@ EOF
 # 主循环
 main() {
     # 初始化首次运行
-    initialize
+    initialize 0
 
     while true; do
         # 检查更新
@@ -202,7 +211,7 @@ main() {
         # 如果有组件更新，则重启服务
         if [ $updated -eq 1 ]; then
             stop_services
-            initialize
+            initialize 1
         fi
 
         # 等待 30 分钟
