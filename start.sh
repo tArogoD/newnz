@@ -1,140 +1,49 @@
 #!/bin/bash
 
 WORK_DIR=/app
-RESTORE_INITIALIZED=0
 REPOS=(
     "nezhahq/nezha:dashboard-linux-amd64.zip:dashboard"
     "nezhahq/agent:nezha-agent_linux_amd64.zip:agent"
 )
 
-# 获取最新版本
 get_latest_version() {
-    local repo="$1"
-    curl -s "https://api.github.com/repos/$repo/releases/latest" | sed -n 's/.*"tag_name": *"\(v\?\([^"]*\)\)".*/\2/p'
+    curl -s "https://api.github.com/repos/$1/releases/latest" | grep -oP '"tag_name": "\K[^"]+' | sed 's/^v//'
 }
 
-# 下载并解压组件
-download_component() {
-    local repo="$1" filename="$2" component="$3"
-    local latest_version=$(get_latest_version "$repo")
-    local download_url="https://github.com/$repo/releases/latest/download/$filename"
-
-    wget -q "$download_url" -O "$filename"
-    if [ -f "$filename" ]; then
-        unzip -qo "$filename" -d "$WORK_DIR" && rm "$filename"
-        return 0
-    else
-        return 1
-    fi
-}
-
-# 检查并更新组件
-update_component() {
+download_and_update_component() {
     local repo="$1" filename="$2" component="$3"
     local latest_version=$(get_latest_version "$repo")
     local current_version=""
-    local version_number=""
 
-    # 检查组件是否存在
-    if [ ! -f "./${component}-linux-amd64" ]; then
-        # 文件不存在，首次运行直接下载
-        download_component "$repo" "$filename" "$component" || {
-            return 1
-        }
+    case "$component" in
+        dashboard)
+            current_version=$(./dashboard-linux-amd64 -v 2>/dev/null)
+            ;;
+        agent)
+            current_version=$(./nezha-agent -v 2>/dev/null | awk '{print $3}')
+            ;;
+    esac
+
+    if [ -z "$current_version" ] || [ "$(printf '%s\n' "$current_version" "$latest_version" | sort -V | head -n1)" != "$current_version" ]; then
+        wget -q "https://github.com/$repo/releases/latest/download/$filename" -O "$filename"
+        unzip -qo "$filename" -d "$WORK_DIR" && rm "$filename"
         return 0
-    }
-
-    # 获取当前版本
-    if [ "$component" == "dashboard" ]; then
-        current_version=$(./dashboard-linux-amd64 -v 2>/dev/null)
-    elif [ "$component" == "agent" ]; then
-        current_version=$(./nezha-agent -v 2>/dev/null | awk '{print $3}')
     fi
-
-    # 提取纯数字版本号(移除所有非数字和点号字符)
-    latest_version_number=$(echo "$latest_version" | sed 's/[^0-9.]//g')
-    current_version_number=$(echo "$current_version" | sed 's/[^0-9.]//g')
-
-    # 比较版本并决定是否更新
-    if [ "$current_version_number" != "$latest_version_number" ]; then
-        download_component "$repo" "$filename" "$component" || {
-            return 1
-        }
-        return 0  # 成功更新
-    else
-        return 1  # 未更新
-    fi
+    return 1
 }
 
-# 设置 SSL
 setup_ssl() {
     openssl genrsa -out $WORK_DIR/nezha.key 2048
     openssl req -new -key $WORK_DIR/nezha.key -out $WORK_DIR/nezha.csr -subj "/CN=$NZ_DOMAIN"
     openssl x509 -req -days 3650 -in $WORK_DIR/nezha.csr -signkey $WORK_DIR/nezha.key -out $WORK_DIR/nezha.pem
-    chmod 600 $WORK_DIR/nezha.key
+
+    chmod 600 $WORK_DIR/nezha.key 
     chmod 644 $WORK_DIR/nezha.pem
 }
 
-# 启动服务
-start_services() {
-    # 启动 Nginx
-    nginx &
-    sleep 2
-    
-    # 启动 Cloudflared
-    nohup ./cloudflared-linux-amd64 tunnel --protocol http2 run --token "$ARGO_AUTH" >/dev/null 2>&1 &
-    sleep 2
-    
-    # 启动仪表板
-    nohup ./dashboard-linux-amd64 >/dev/null 2>&1 &
-    sleep 10
-    
-    # 启动 Nezha Agent
-    NZ_SERVER=$NZ_DOMAIN:443 NZ_TLS=true NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent >/dev/null 2>&1 &
-}
-
-# 停止服务
-stop_services() {
-    pkill -f "dashboard-linux-amd64|cloudflared-linux-amd64|nezha-agent|nginx"
-}
-
-initialize() {
-    # 检查必要的环境变量
-    [ -z "$NZ_DOMAIN" ] && { echo "Error: NZ_DOMAIN not set"; exit 1; }
-    [ -z "$ARGO_AUTH" ] && { echo "Error: ARGO_AUTH not set"; exit 1; }
-    [ -z "$NZ_agentsecretkey" ] && { echo "Error: NZ_agentsecretkey not set"; exit 1; }
-
-    # 只在首次初始化或有组件更新时运行 restore.sh
-    if [ $RESTORE_INITIALIZED -eq 0 ] || [ "$1" = "1" ]; then
-        # 恢复
-        [ -f "restore.sh" ] && { chmod +x restore.sh; ./restore.sh; }
-        
-        # 首次初始化时设置标志
-        if [ $RESTORE_INITIALIZED -eq 0 ]; then
-            RESTORE_INITIALIZED=1
-        fi
-    fi
-
-    # 设置 SSL
-    setup_ssl
-
-    # 更新组件
-    for repo_info in "${REPOS[@]}"; do
-        IFS=: read -r repo filename component <<< "$repo_info"
-        download_component "$repo" "$filename" "$component" || true
-    done
-
-    # 下载 Cloudflared
-    [ ! -f "cloudflared-linux-amd64" ] && wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-
-    # 设置权限
-    chmod +x dashboard-linux-amd64 cloudflared-linux-amd64 nezha-agent
-
-    # 创建 Nginx 配置
+create_nginx_config() {
     cat << EOF > /etc/nginx/conf.d/default.conf
 server {
-    listen 80;
-    listen [::]:80;
     http2 on;
 
     server_name $NZ_DOMAIN;
@@ -188,36 +97,81 @@ upstream dashboard {
     keepalive 512;
 }
 EOF
+}
+
+check_env_variables() {
+    [ -z "$NZ_DOMAIN" ] && { echo "Error: NZ_DOMAIN not set"; exit 1; }
+    [ -z "$ARGO_AUTH" ] && { echo "Error: ARGO_AUTH not set"; exit 1; }
+    [ -z "$NZ_agentsecretkey" ] && { echo "Error: NZ_agentsecretkey not set"; exit 1; }
+}
+
+start_services() {
+    # 启动 Nginx
+    nohup nginx >/dev/null 2>&1 &
+
+    # 启动 Cloudflared
+    nohup ./cloudflared-linux-amd64 tunnel --protocol http2 run --token "$ARGO_AUTH" >/dev/null 2>&1 &
+
+    # 启动 Dashboard
+    nohup ./dashboard-linux-amd64 >/dev/null 2>&1 &
+
+    # 启动 Nezha Agent
+    NZ_SERVER=$NZ_DOMAIN:443 NZ_TLS=true NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent >/dev/null 2>&1 &
+}
+
+stop_services() {
+    pkill -f "dashboard-linux-amd64|cloudflared-linux-amd64|nezha-agent|nginx"
+}
+
+main() {
+    # 检查环境变量
+    check_env_variables
+
+    # 恢复
+    [ -f "restore.sh" ] && { chmod +x restore.sh; ./restore.sh; }
+
+    # 设置 SSL
+    setup_ssl
+
+    # 创建 Nginx 配置
+    create_nginx_config
+
+    # 下载并更新组件
+    for repo_info in "${REPOS[@]}"; do
+        IFS=: read -r repo filename component <<< "$repo_info"
+        download_and_update_component "$repo" "$filename" "$component"
+    done
+
+    # 下载 Cloudflared
+    [ ! -f "cloudflared-linux-amd64" ] && wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+
+    # 设置权限
+    chmod +x dashboard-linux-amd64 cloudflared-linux-amd64 nezha-agent
 
     # 启动服务
     start_services
 }
 
-# 主循环
-main() {
-    # 初始化首次运行
-    initialize 0
-
-    while true; do
-        # 检查更新
-        updated=0
-        for repo_info in "${REPOS[@]}"; do
-            IFS=: read -r repo filename component <<< "$repo_info"
-            if update_component "$repo" "$filename" "$component"; then
-                updated=1
-            fi
-        done
-
-        # 如果有组件更新，则重启服务
-        if [ $updated -eq 1 ]; then
-            stop_services
-            initialize 1
-        fi
-
-        # 等待 30 分钟
-        sleep 1800
-    done
-}
-
-# 启动主程序
 main
+
+# 主循环
+while true; do
+
+    # 等待 30 分钟
+    sleep 1800
+
+    # 检查更新
+    updated=0
+    for repo_info in "${REPOS[@]}"; do
+        IFS=: read -r repo filename component <<< "$repo_info"
+        if download_and_update_component "$repo" "$filename" "$component"; then
+            updated=1
+        fi
+    done
+
+    # 如果有组件更新，则重启服务
+    if [ $updated -eq 1 ]; then
+        stop_services
+        main
+    fi
+done
