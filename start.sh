@@ -7,12 +7,21 @@ REPOS=(
 )
 
 get_latest_version() {
-    curl -s "https://api.github.com/repos/$repo/releases/latest" | sed -n 's/.*"tag_name": *"\(v\?\([^"]*\)\)".*/\2/p'
+    local repo="$1"
+    local version=$(curl -sL "https://github.com/$repo/releases" | sed -n 's/.*tag\/\(v[0-9.]\+\).*/\1/p' | sed 's/^v//' | head -n1)
+    
+    if [ -z "$version" ]; then
+        local filename=$(echo "$2" | cut -d: -f2)
+        wget -q "https://github.com/$repo/releases/latest/download/$filename" -O "$filename"
+        version=$(unzip -qql "$filename" | head -n1 | sed -E 's/.*([0-9.]+).*/\1/')
+    fi
+    
+    echo "$version"
 }
 
 download_and_update_component() {
     local repo="$1" filename="$2" component="$3"
-    local latest_version=$(get_latest_version "$repo")
+    local latest_version=$(get_latest_version "$repo" "$filename")
     local current_version=""
 
     case "$component" in
