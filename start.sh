@@ -7,7 +7,7 @@ REPOS=(
 )
 
 get_latest_version() {
-    curl -s "https://api.github.com/repos/$1/releases/latest" | grep -oP '"tag_name": "\K[^"]+' | sed 's/^v//'
+    curl -s "https://api.github.com/repos/$repo/releases/latest" | sed -n 's/.*"tag_name": *"\(v\?\([^"]*\)\)".*/\2/p'
 }
 
 download_and_update_component() {
