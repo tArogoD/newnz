@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Check if required environment variables are set
 if [ -z "$GITHUB_USERNAME" ] || [ -z "$REPO_NAME" ] || [ -z "$GITHUB_TOKEN" ]; then
     echo "Error: Please set GITHUB_USERNAME, REPO_NAME, and GITHUB_TOKEN environment variables"
@@ -20,14 +19,20 @@ GITHUB_REPO="https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USER
 if [ ! -d "temp_repo" ]; then
     git clone "$GITHUB_REPO" temp_repo
 fi
-
 cd temp_repo
+
+# Fetch existing backup files from the repository
+git pull origin main
 
 # Add backup file to repo root
 cp "../$BACKUP_FILE" ./
 
 # Remove old backups, keeping only the 5 most recent
-ls data-*.tar.gz | sort -r | tail -n +6 | xargs -I {} rm -f {}
+BACKUPS=$(ls data-*.tar.gz 2>/dev/null | sort -r)
+BACKUPS_TO_REMOVE=$(echo "$BACKUPS" | tail -n +6)
+for backup in $BACKUPS_TO_REMOVE; do
+    git rm "$backup"
+done
 
 # Commit and push
 git add "$BACKUP_FILE"
