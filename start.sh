@@ -21,7 +21,12 @@ get_latest_version() {
 
 download_and_update_component() {
     local repo="$1" filename="$2" component="$3"
-    local latest_version=$(get_latest_version "$repo" "$filename")
+    local latest_version
+    latest_version=$(get_latest_version "$repo")
+    
+    # 如果获取版本失败，跳过此组件
+    [ $? -ne 0 ] && return 1
+
     local current_version=""
 
     case "$component" in
