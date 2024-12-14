@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# 安装 tzdata 确保时区支持
+apk add --no-cache tzdata
+
+# 设置时区为上海
+export TZ='Asia/Shanghai'
+
 WORK_DIR=/app
 REPOS=(
     "nezhahq/nezha:dashboard-linux-amd64.zip:dashboard"
@@ -165,18 +171,20 @@ main() {
 main
 
 while true; do
-    # 获取当前上海时间
-    current_time=$(TZ='Asia/Shanghai' date +"%H:%M")
+    # Alpine 兼容的时间获取方式
+    current_hour=$(date +"%H")
+    current_minute=$(date +"%M")
 
     # 检查是否为凌晨4点
-    if [ "$current_time" == "04:00" ]; then
+    if [ "$current_hour" -eq 4 ] && [ "$current_minute" -eq 0 ]; then
         # 执行备份
         [ -f "backup.sh" ] && { 
             chmod +x backup.sh
             ./backup.sh
+            
+            # 确保备份脚本执行完成，避免频繁触发
+            sleep 3600
         }
-        # 等待一小时，避免重复执行
-        sleep 3600
     fi
 
     sleep 1800
