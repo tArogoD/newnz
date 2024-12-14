@@ -6,43 +6,55 @@ REPOS=(
     "nezhahq/agent:nezha-agent_linux_amd64.zip:agent"
 )
 
-get_latest_version() {
-    local repo="$1"
+get_local_version() {
+    local component="$1"
     local version=""
-
-    version=$(curl -s "https://api.github.com/repos/$repo/releases/latest" | jq -r '.tag_name | sub("^v"; "")')
     
-    if [ -z "$version" ]; then
-        return 1
-    fi
+    case "$component" in
+        dashboard)
+            version=$(./dashboard-linux-amd64 -v 2>/dev/null)
+            ;;
+        agent)
+            version=$(./nezha-agent -v 2>/dev/null | awk '{print $3}')
+            ;;
+    esac
+    
+    echo "$version" | grep -oE '[0-9.]+'
+}
+
+get_remote_version() {
+    local repo="$1"
+    local version=$(curl -sL "https://api.github.com/repos/$repo/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v?([0-9.]+)".*/\1/')
     
     echo "$version"
 }
 
 download_and_update_component() {
     local repo="$1" filename="$2" component="$3"
-    local latest_version
-    latest_version=$(get_latest_version "$repo")
     
-    # 如果获取版本失败，跳过此组件
-    [ $? -ne 0 ] && return 1
-
-    local current_version=""
-
-    case "$component" in
-        dashboard)
-            current_version=$(./dashboard-linux-amd64 -v 2>/dev/null)
-            ;;
-        agent)
-            current_version=$(./nezha-agent -v 2>/dev/null | awk '{print $3}')
-            ;;
-    esac
-
-    if [ -z "$current_version" ] || [ "$(printf '%s\n' "$current_version" "$latest_version" | sort -V | head -n1)" != "$current_version" ]; then
+    local local_version=$(get_local_version "$component")
+    local remote_version=$(get_remote_version "$repo")
+    
+    if [ -z "$local_version" ]; then
         wget -q "https://github.com/$repo/releases/latest/download/$filename" -O "$filename"
-        unzip -qo "$filename" -d "$WORK_DIR" && rm "$filename"
-        return 0
+        if [ $? -eq 0 ]; then
+            unzip -qo "$filename" -d "$WORK_DIR" && rm "$filename"
+            return 0
+        fi
     fi
+    
+    if [ -z "$remote_version" ]; then
+        return 1
+    fi
+    
+    if [ "$local_version" != "$remote_version" ]; then
+        wget -q "https://github.com/$repo/releases/latest/download/$filename" -O "$filename"
+        if [ $? -eq 0 ]; then
+            unzip -qo "$filename" -d "$WORK_DIR" && rm "$filename"
+            return 0
+        fi
+    fi
+    
     return 1
 }
 
@@ -120,16 +132,9 @@ check_env_variables() {
 }
 
 start_services() {
-    # 启动 Nginx
     nohup nginx >/dev/null 2>&1 &
-
-    # 启动 Cloudflared
     nohup ./cloudflared-linux-amd64 tunnel --protocol http2 run --token "$ARGO_AUTH" >/dev/null 2>&1 &
-
-    # 启动 Dashboard
     nohup ./dashboard-linux-amd64 >/dev/null 2>&1 &
-
-    # 启动 Nezha Agent
     NZ_SERVER=$NZ_DOMAIN:443 NZ_TLS=true NZ_CLIENT_SECRET=$NZ_agentsecretkey nohup ./nezha-agent >/dev/null 2>&1 &
 }
 
@@ -138,43 +143,44 @@ stop_services() {
 }
 
 main() {
-    # 检查环境变量
     check_env_variables
 
-    # 恢复
     [ -f "restore.sh" ] && { chmod +x restore.sh; ./restore.sh; }
 
-    # 设置 SSL
     setup_ssl
-
-    # 创建 Nginx 配置
     create_nginx_config
 
-    # 下载并更新组件
     for repo_info in "${REPOS[@]}"; do
         IFS=: read -r repo filename component <<< "$repo_info"
         download_and_update_component "$repo" "$filename" "$component"
     done
 
-    # 下载 Cloudflared
     [ ! -f "cloudflared-linux-amd64" ] && wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
 
-    # 设置权限
     chmod +x dashboard-linux-amd64 cloudflared-linux-amd64 nezha-agent
 
-    # 启动服务
     start_services
 }
 
 main
 
-# 主循环
 while true; do
+    # 获取当前上海时间
+    current_time=$(TZ='Asia/Shanghai' date +"%H:%M")
 
-    # 等待 30 分钟
+    # 检查是否为凌晨4点
+    if [ "$current_time" == "04:00" ]; then
+        # 执行备份
+        [ -f "backup.sh" ] && { 
+            chmod +x backup.sh
+            ./backup.sh
+        }
+        # 等待一小时，避免重复执行
+        sleep 3600
+    fi
+
     sleep 1800
 
-    # 检查更新
     updated=0
     for repo_info in "${REPOS[@]}"; do
         IFS=: read -r repo filename component <<< "$repo_info"
@@ -183,7 +189,6 @@ while true; do
         fi
     done
 
-    # 如果有组件更新，则重启服务
     if [ $updated -eq 1 ]; then
         stop_services
         main
