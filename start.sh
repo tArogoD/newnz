@@ -76,45 +76,22 @@ setup_ssl() {
 create_nginx_config() {
     cat << EOF > /etc/nginx/conf.d/default.conf
 server {
-    listen 80;
-    server_name $NZ_DOMAIN;
-
-    location /health {
-        return 200 'healthy\n';
-        add_header Content-Type text/plain;
-    }
-
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-
-server {
-    http2 on
-    
-    location /health {
-        return 200 'healthy\n';
-        add_header Content-Type text/plain;
-    }
+    http2 on;
 
     server_name $NZ_DOMAIN;
     ssl_certificate          $WORK_DIR/nezha.pem;
     ssl_certificate_key      $WORK_DIR/nezha.key;
-    ssl_stapling on;
     ssl_session_timeout 1d;
-    ssl_session_cache shared:SSL:10m; # 如果与其他配置冲突，请注释此项
+    ssl_session_cache shared:SSL:10m;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     underscores_in_headers on;
-    set_real_ip_from 0.0.0.0/0; # 替换为你的 CDN 回源 IP 地址段
-    real_ip_header CF-Connecting-IP; # 替换为你的 CDN 提供的私有 header，此处为 CloudFlare 默认
-    # 如果你使用nginx作为最外层，把上面两行注释掉
+    set_real_ip_from 0.0.0.0/0;
+    real_ip_header CF-Connecting-IP;
 
-    # grpc 相关    
     location ^~ /proto.NezhaService/ {
-        grpc_set_header Host $host;
-        grpc_set_header nz-realip $http_CF_Connecting_IP; # 替换为你的 CDN 提供的私有 header，此处为 CloudFlare 默认
-        # grpc_set_header nz-realip $remote_addr; # 如果你使用nginx作为最外层，就把上面一行注释掉，启用此行
+        grpc_set_header Host \$host;
+        grpc_set_header nz-realip \$http_CF_Connecting_IP;
         grpc_read_timeout 600s;
         grpc_send_timeout 600s;
         grpc_socket_keepalive on;
@@ -122,35 +99,33 @@ server {
         grpc_buffer_size 4m;
         grpc_pass grpc://dashboard;
     }
-    # websocket 相关
+
     location ~* ^/api/v1/ws/(server|terminal|file)(.*)$ {
-        proxy_set_header Host $host;
-        proxy_set_header nz-realip $http_cf_connecting_ip; # 替换为你的 CDN 提供的私有 header，此处为 CloudFlare 默认
-        # proxy_set_header nz-realip $remote_addr; # 如果你使用nginx作为最外层，就把上面一行注释掉，启用此行
-        proxy_set_header Origin https://$host;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Host \$host;
+        proxy_set_header nz-realip \$http_cf_connecting_ip;
+        proxy_set_header Origin https://\$host;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
-        proxy_pass http://127.0.0.1:8008;
+        proxy_pass http://dashboard;
     }
-    # web
+
     location / {
-        proxy_set_header Host $host;
-        proxy_set_header nz-realip $http_cf_connecting_ip; # 替换为你的 CDN 提供的私有 header，此处为 CloudFlare 默认
-        # proxy_set_header nz-realip $remote_addr; # 如果你使用nginx作为最外层，就把上面一行注释掉，启用此行
+        proxy_set_header Host \$host;
+        proxy_set_header nz-realip \$http_cf_connecting_ip;
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
         proxy_buffer_size 128k;
         proxy_buffers 4 256k;
         proxy_busy_buffers_size 256k;
         proxy_max_temp_file_size 0;
-        proxy_pass http://127.0.0.1:8008;
+        proxy_pass http://dashboard;
     }
 }
 
 upstream dashboard {
-    server 127.0.0.1:8008;
+    server localhost:8008;
     keepalive 512;
 }
 EOF
