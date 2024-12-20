@@ -76,6 +76,7 @@ setup_ssl() {
 create_nginx_config() {
     cat << EOF > /etc/nginx/conf.d/default.conf
 server {
+    listen 80;
     http2 on;
 
     server_name $NZ_DOMAIN;
