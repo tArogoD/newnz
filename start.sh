@@ -76,6 +76,19 @@ setup_ssl() {
 create_nginx_config() {
     cat << EOF > /etc/nginx/conf.d/default.conf
 server {
+    listen 80;
+    server_name $NZ_DOMAIN;
+    
+    location /health {
+        return 200 'healthy\n';
+        add_header Content-Type text/plain;
+    }
+    
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+server {
     http2 on;
 
     server_name $NZ_DOMAIN;
